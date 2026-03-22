@@ -43,14 +43,15 @@ object frmGhiComposer: TfrmGhiComposer
         WantReturns = True
         WordWrap = True
       end
-      object lblFile: TLabel
+      object btnRun: TButton
         Left = 12
         Top = 176
-        Width = 720
-        Height = 17
-        Anchors = [akLeft, akTop, akRight]
-        AutoSize = False
-        Caption = 'Arquivo:'
+        Width = 120
+        Height = 28
+        Caption = 'Executar'
+        Default = True
+        TabOrder = 1
+        OnClick = btnRunClick
       end
     end
     object tabApi: TTabSheet
@@ -131,25 +132,15 @@ object frmGhiComposer: TfrmGhiComposer
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
-    object btnRun: TButton
+    object btnApply: TButton
       Left = 12
       Top = 6
       Width = 120
       Height = 28
-      Caption = 'Executar'
-      Default = True
+      Caption = 'Aplicar'
+      Enabled = False
       TabOrder = 0
-      OnClick = btnRunClick
-    end
-    object btnClose: TButton
-      Left = 140
-      Top = 6
-      Width = 100
-      Height = 28
-      Cancel = True
-      Caption = 'Fechar'
-      TabOrder = 1
-      OnClick = btnCloseClick
+      OnClick = btnApplyClick
     end
   end
   object lblStatus: TLabel

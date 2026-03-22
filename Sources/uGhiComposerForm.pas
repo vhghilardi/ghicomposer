@@ -22,7 +22,7 @@ type
     tabApi: TTabSheet;
     lblPrompt: TLabel;
     memPrompt: TMemo;
-    lblFile: TLabel;
+    btnRun: TButton;
     grpConn: TGroupBox;
     lblUrl: TLabel;
     edtUrl: TEdit;
@@ -32,8 +32,7 @@ type
     lblKey: TLabel;
     edtApiKey: TEdit;
     pnlBottom: TPanel;
-    btnRun: TButton;
-    btnClose: TButton;
+    btnApply: TButton;
     reStatus: TRichEdit;
     lblStatus: TLabel;
     procedure FormCreate(Sender: TObject);
@@ -41,10 +40,14 @@ type
     procedure FormShow(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnRunClick(Sender: TObject);
-    procedure btnCloseClick(Sender: TObject);
+    procedure btnApplyClick(Sender: TObject);
     procedure btnRefreshModelsClick(Sender: TObject);
   private
     FIniPath: string;
+    FPendingOutText: string;
+    FPendingSelOnly: Boolean;
+    FPendingTargetFile: string;
+    FPendingHasApply: Boolean;
     procedure ApplyLocalizedCaptions;
     procedure SyncModelAfterIni(const AModel: string);
     procedure SyncModelComboAfterLoad;
@@ -144,6 +147,7 @@ begin
   SaveStateNecessary := True;
   DeskSection := 'GhiComposer';
   FIniPath := ConfigPath;
+  FPendingHasApply := False;
   ApplyLocalizedCaptions;
   reStatus.Font.Name := 'Consolas';
   reStatus.Font.Size := 10;
@@ -163,22 +167,47 @@ begin
 end;
 
 procedure TfrmGhiComposer.FormShow(Sender: TObject);
-var
-  Ed: IOTASourceEditor;
-  V: IOTAEditView;
 begin
   LoadSettings;
   if edtUrl.Text = '' then
     edtUrl.Text := cDefUrl;
   SyncModelComboAfterLoad;
-  lblFile.Caption := 'Arquivo: (nenhum editor de código ativo)';
-  if GhiTryGetActiveSourceEditor(Ed, V) then
-    lblFile.Caption := 'Arquivo: ' + GhiGetActiveFileName(Ed);
 end;
 
-procedure TfrmGhiComposer.btnCloseClick(Sender: TObject);
+procedure TfrmGhiComposer.btnApplyClick(Sender: TObject);
+var
+  Ed: IOTASourceEditor;
+  V: IOTAEditView;
 begin
-  Close;
+  if not FPendingHasApply then
+    Exit;
+  if not GhiTryGetActiveSourceEditor(Ed, V) then
+  begin
+    GhiRichEditAppendPlain(reStatus, 'Nenhum editor ativo para aplicar.');
+    Exit;
+  end;
+  if not SameText(GhiGetActiveFileName(Ed), FPendingTargetFile) then
+  begin
+    GhiRichEditAppendPlain(reStatus,
+      'O arquivo ativo não é o mesmo da execução. Abra o arquivo correto ou execute novamente.');
+    Exit;
+  end;
+  if FPendingSelOnly and not GhiHasNonEmptyEditorSelection(Ed) then
+  begin
+    GhiRichEditAppendPlain(reStatus,
+      'Modo seleção: selecione o trecho no editor (como na execução) ou execute novamente.');
+    Exit;
+  end;
+  if not GhiReplaceScope(Ed, V, FPendingOutText, FPendingSelOnly) then
+  begin
+    GhiRichEditAppendPlain(reStatus, 'Falha ao escrever no editor.');
+    Exit;
+  end;
+  GhiRichEditAppendPlain(reStatus, '');
+  GhiRichEditAppendPlain(reStatus, '---');
+  GhiRichEditAppendPlain(reStatus, 'Código aplicado.');
+  FPendingHasApply := False;
+  btnApply.Enabled := False;
 end;
 
 procedure TfrmGhiComposer.btnRefreshModelsClick(Sender: TObject);
@@ -187,6 +216,8 @@ var
   Cur: string;
 begin
   reStatus.Clear;
+  FPendingHasApply := False;
+  btnApply.Enabled := False;
   if Trim(edtUrl.Text) = '' then
   begin
     GhiRichEditAppendPlain(reStatus, 'Informe o endpoint (chat completions) na aba API.');
@@ -232,6 +263,8 @@ var
   UserBlock: string;
 begin
   reStatus.Clear;
+  FPendingHasApply := False;
+  btnApply.Enabled := False;
   if not GhiTryGetActiveSourceEditor(Ed, V) then
   begin
     GhiRichEditAppendPlain(reStatus, 'Abra um .pas ou .dfm como texto no editor e tente novamente.');
@@ -323,30 +356,14 @@ begin
 
   GhiShowLineDiffInRichEdit(reStatus, Code, OutText);
 
-  case MessageDlg('Substituir o código no editor pelo resultado do modelo?',
-    mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
-    mrYes:
-      begin
-        GhiRichEditAppendPlain(reStatus, '');
-        GhiRichEditAppendPlain(reStatus, '---');
-        if not GhiReplaceScope(Ed, V, OutText, SelOnly) then
-          GhiRichEditAppendPlain(reStatus, 'Falha ao escrever no editor.')
-        else
-          GhiRichEditAppendPlain(reStatus, 'Código aplicado.');
-      end;
-    mrNo:
-      begin
-        GhiRichEditAppendPlain(reStatus, '');
-        GhiRichEditAppendPlain(reStatus, '---');
-        GhiRichEditAppendPlain(reStatus, 'Não aplicado. O diff acima permanece visível.');
-      end;
-  else
-    begin
-      GhiRichEditAppendPlain(reStatus, '');
-      GhiRichEditAppendPlain(reStatus, '---');
-      GhiRichEditAppendPlain(reStatus, 'Substituição cancelada. O diff permanece acima.');
-    end;
-  end;
+  FPendingOutText := OutText;
+  FPendingSelOnly := SelOnly;
+  FPendingTargetFile := GhiGetActiveFileName(Ed);
+  FPendingHasApply := True;
+  btnApply.Enabled := True;
+  GhiRichEditAppendPlain(reStatus, '');
+  GhiRichEditAppendPlain(reStatus, '---');
+  GhiRichEditAppendPlain(reStatus, 'Use o botão Aplicar para gravar o resultado no editor.');
 end;
 
 end.
