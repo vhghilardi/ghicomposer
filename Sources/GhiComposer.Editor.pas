@@ -19,6 +19,18 @@ uses
   System.SysUtils,
   System.Classes;
 
+function GhiEditorHasNonEmptySelection(const AEditor: IOTASourceEditor): Boolean;
+var
+  BS, BA: TOTACharPos;
+begin
+  Result := False;
+  if AEditor = nil then
+    Exit;
+  BS := AEditor.BlockStart;
+  BA := AEditor.BlockAfter;
+  Result := (BS.Line <> BA.Line) or (BS.CharIndex <> BA.CharIndex);
+end;
+
 function GhiTryGetActiveSourceEditor(out AEditor: IOTASourceEditor;
   out AView: IOTAEditView): Boolean;
 var
@@ -65,8 +77,11 @@ begin
 end;
 
 procedure StringToUtf8Insert(const AWriter: IOTAEditWriter; const S: string);
+var
+  U8: UTF8String;
 begin
-  AWriter.Insert(S);
+  U8 := UTF8Encode(S);
+  AWriter.Insert(PAnsiChar(U8));
 end;
 
 function GhiReadScope(const AEditor: IOTASourceEditor; const AView: IOTAEditView;
@@ -78,10 +93,12 @@ var
   Lines: Integer;
 begin
   AText := '';
-  AHasSelection := AView.BlockSize > 0;
+  AHasSelection := False;
   Result := False;
   if (AEditor = nil) or (AView = nil) then
     Exit;
+
+  AHasSelection := GhiEditorHasNonEmptySelection(AEditor);
 
   Reader := AEditor.CreateReader;
   if Reader = nil then
@@ -89,7 +106,7 @@ begin
 
   if ASelectionOnly then
   begin
-    if AView.BlockSize <= 0 then
+    if not GhiEditorHasNonEmptySelection(AEditor) then
       Exit;
     BlockStart := AEditor.BlockStart;
     BlockAfter := AEditor.BlockAfter;
@@ -125,7 +142,7 @@ begin
   if Writer = nil then
     Exit;
 
-  if ASelectionOnly and (AView.BlockSize > 0) then
+  if ASelectionOnly and GhiEditorHasNonEmptySelection(AEditor) then
   begin
     BlockStart := AEditor.BlockStart;
     BlockAfter := AEditor.BlockAfter;
