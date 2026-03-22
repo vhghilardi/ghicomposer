@@ -27,6 +27,14 @@ uses
   System.Classes,
   Vcl.Forms;
 
+function GhiOtaEditorFileName(const AEditor: IOTAEditor): string;
+begin
+  Result := '';
+  if AEditor = nil then
+    Exit;
+  Result := AEditor.FileName;
+end;
+
 function GhiFindFormStreamSourceEditor(const AModule: IOTAModule;
   out AEditor: IOTAEditor): Boolean;
 var
@@ -42,10 +50,10 @@ begin
   N := AModule.GetModuleFileCount;
   for I := 0 to N - 1 do
   begin
-    Ext := LowerCase(ExtractFileExt(AModule.GetModuleFileName(I)));
+    E := AModule.GetModuleFileEditor(I);
+    Ext := LowerCase(ExtractFileExt(GhiOtaEditorFileName(E)));
     if (Ext <> '.dfm') and (Ext <> '.fmx') then
       Continue;
-    E := AModule.GetModuleFileEditor(I);
     if Supports(E, IOTASourceEditor, S) then
     begin
       AEditor := E;
@@ -146,10 +154,10 @@ begin
     begin
       E := M.GetModuleFileEditor(I);
       if E = Ed then
-        Exit(M.GetModuleFileName(I));
+        Exit(GhiOtaEditorFileName(E));
     end;
   end;
-  Result := Ed.FileName;
+  Result := GhiOtaEditorFileName(Ed);
 end;
 
 function Utf8BufferToString(const AReader: IOTAEditReader; AStartPos, AEndPos: Integer): string;
