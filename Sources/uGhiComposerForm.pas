@@ -515,6 +515,7 @@ begin
 
   FPendingHasApply := True;
   btnApply.Enabled := True;
+  memPrompt.Clear;
 end;
 
 end.
