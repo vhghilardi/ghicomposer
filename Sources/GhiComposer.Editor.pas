@@ -7,6 +7,12 @@ uses
 
 function GhiTryGetActiveSourceEditor(out AEditor: IOTASourceEditor;
   out AView: IOTAEditView): Boolean;
+/// <summary>
+/// Se o foco estiver no designer (IOTAFormEditor), ativa o editor de fonte do .dfm/.fmx
+/// (equivalente a View as Text). Se já estiver no .dfm/.fmx em texto, não altera.
+/// Units só .pas sem formulário: retorna True sem mudança.
+/// </summary>
+function GhiTryEnsureFormStreamTextView(out AError: string): Boolean;
 function GhiGetActiveFileName(const AEditor: IOTASourceEditor): string;
 function GhiHasNonEmptyEditorSelection(const AEditor: IOTASourceEditor): Boolean;
 function GhiReadScope(const AEditor: IOTASourceEditor; const AView: IOTAEditView;
@@ -18,7 +24,78 @@ implementation
 
 uses
   System.SysUtils,
-  System.Classes;
+  System.Classes,
+  Vcl.Forms;
+
+function GhiFindFormStreamSourceEditor(const AModule: IOTAModule;
+  out AEditor: IOTAEditor): Boolean;
+var
+  I, N: Integer;
+  E: IOTAEditor;
+  S: IOTASourceEditor;
+  Ext: string;
+begin
+  Result := False;
+  AEditor := nil;
+  if AModule = nil then
+    Exit;
+  N := AModule.GetModuleFileCount;
+  for I := 0 to N - 1 do
+  begin
+    Ext := LowerCase(ExtractFileExt(AModule.GetModuleFileName(I)));
+    if (Ext <> '.dfm') and (Ext <> '.fmx') then
+      Continue;
+    E := AModule.GetModuleFileEditor(I);
+    if Supports(E, IOTASourceEditor, S) then
+    begin
+      AEditor := E;
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function GhiTryEnsureFormStreamTextView(out AError: string): Boolean;
+var
+  EdSvcs: IOTAEditorServices;
+  V: IOTAEditView;
+  SE: IOTASourceEditor;
+  FE: IOTAFormEditor;
+  AModule: IOTAModule;
+  DfmEd: IOTAEditor;
+begin
+  AError := '';
+  Result := True;
+  if not Supports(BorlandIDEServices, IOTAEditorServices, EdSvcs) then
+  begin
+    AError := 'Serviços do editor não disponíveis.';
+    Exit(False);
+  end;
+  V := EdSvcs.TopView;
+  if V = nil then
+  begin
+    AError := 'Nenhuma vista de editor ativa.';
+    Exit(False);
+  end;
+
+  if Supports(V.Buffer, IOTASourceEditor, SE) and (SE <> nil) then
+    Exit(True);
+
+  if Supports(V.Buffer, IOTAFormEditor, FE) and (FE <> nil) then
+  begin
+    AModule := (FE as IOTAEditor).Module;
+    if not GhiFindFormStreamSourceEditor(AModule, DfmEd) or (DfmEd = nil) then
+    begin
+      AError := 'Formulário visual ativo, mas não foi encontrado .dfm/.fmx em modo texto.';
+      Exit(False);
+    end;
+    DfmEd.Show;
+    Application.ProcessMessages;
+    Exit(True);
+  end;
+
+  Result := True;
+end;
 
 function GhiHasNonEmptyEditorSelection(const AEditor: IOTASourceEditor): Boolean;
 var
@@ -52,15 +129,27 @@ end;
 
 function GhiGetActiveFileName(const AEditor: IOTASourceEditor): string;
 var
-  Module: IOTAModule;
+  M: IOTAModule;
+  I, N: Integer;
+  Ed: IOTAEditor;
+  E: IOTAEditor;
 begin
   Result := '';
   if AEditor = nil then
     Exit;
-  Module := AEditor.Module;
-  if Module = nil then
-    Exit;
-  Result := Module.FileName;
+  Ed := AEditor as IOTAEditor;
+  M := AEditor.Module;
+  if M <> nil then
+  begin
+    N := M.GetModuleFileCount;
+    for I := 0 to N - 1 do
+    begin
+      E := M.GetModuleFileEditor(I);
+      if E = Ed then
+        Exit(M.GetModuleFileName(I));
+    end;
+  end;
+  Result := Ed.FileName;
 end;
 
 function Utf8BufferToString(const AReader: IOTAEditReader; AStartPos, AEndPos: Integer): string;

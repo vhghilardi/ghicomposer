@@ -178,9 +178,20 @@ procedure TfrmGhiComposer.btnApplyClick(Sender: TObject);
 var
   Ed: IOTASourceEditor;
   V: IOTAEditView;
+  Err: string;
+  Ext: string;
 begin
   if not FPendingHasApply then
     Exit;
+  Ext := LowerCase(ExtractFileExt(FPendingTargetFile));
+  if (Ext = '.dfm') or (Ext = '.fmx') then
+  begin
+    if not GhiTryEnsureFormStreamTextView(Err) then
+    begin
+      GhiRichEditAppendPlain(reStatus, Err);
+      Exit;
+    end;
+  end;
   if not GhiTryGetActiveSourceEditor(Ed, V) then
   begin
     GhiRichEditAppendPlain(reStatus, 'Nenhum editor ativo para aplicar.');
@@ -265,9 +276,15 @@ begin
   reStatus.Clear;
   FPendingHasApply := False;
   btnApply.Enabled := False;
+  if not GhiTryEnsureFormStreamTextView(Err) then
+  begin
+    GhiRichEditAppendPlain(reStatus, Err);
+    Exit;
+  end;
   if not GhiTryGetActiveSourceEditor(Ed, V) then
   begin
-    GhiRichEditAppendPlain(reStatus, 'Abra um .pas ou .dfm como texto no editor e tente novamente.');
+    GhiRichEditAppendPlain(reStatus,
+      'Abra um .pas, .dfm em modo texto ou o designer do formulário e tente novamente.');
     Exit;
   end;
 
