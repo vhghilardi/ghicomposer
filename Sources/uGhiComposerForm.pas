@@ -12,11 +12,14 @@ uses
   Vcl.Dialogs,
   Vcl.StdCtrls,
   Vcl.ExtCtrls,
+  Vcl.ComCtrls,
   DockForm;
 
 type
   TfrmGhiComposer = class(TDockableForm)
-    pnlTop: TPanel;
+    pgcMain: TPageControl;
+    tabPrompt: TTabSheet;
+    tabApi: TTabSheet;
     lblPrompt: TLabel;
     memPrompt: TMemo;
     chkSelOnly: TCheckBox;
@@ -177,6 +180,20 @@ begin
   if chkSelOnly.Checked and not HasSel then
   begin
     memStatus.Lines.Add('Marque texto no editor ou desmarque "Apenas selecao".');
+    Exit;
+  end;
+
+  if Trim(edtUrl.Text) = '' then
+  begin
+    memStatus.Lines.Add('Indique o endpoint na aba "Ligacao API".');
+    pgcMain.ActivePage := tabApi;
+    Exit;
+  end;
+
+  if Trim(edtApiKey.Text) = '' then
+  begin
+    memStatus.Lines.Add('Indique a API Key na aba "Ligacao API".');
+    pgcMain.ActivePage := tabApi;
     Exit;
   end;
 

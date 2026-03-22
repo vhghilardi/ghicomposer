@@ -16,96 +16,106 @@ object frmGhiComposer: TfrmGhiComposer
   OnDestroy = FormDestroy
   OnShow = FormShow
   TextHeight = 17
-  object pnlTop: TPanel
+  object pgcMain: TPageControl
     Left = 0
     Top = 0
     Width = 760
-    Height = 248
+    Height = 260
     Align = alTop
-    BevelOuter = bvNone
     TabOrder = 0
-    object lblPrompt: TLabel
-      Left = 12
-      Top = 8
-      Width = 38
-      Height = 17
-      Caption = 'Prompt'
-    end
-    object memPrompt: TMemo
-      Left = 12
-      Top = 28
-      Width = 736
-      Height = 72
-      ScrollBars = ssVertical
-      TabOrder = 0
-      WantReturns = True
-      WordWrap = True
-    end
-    object chkSelOnly: TCheckBox
-      Left = 12
-      Top = 108
-      Width = 320
-      Height = 17
-      Caption = 'Apenas texto selecionado (senao, ficheiro inteiro)'
-      TabOrder = 1
-    end
-    object lblFile: TLabel
-      Left = 12
-      Top = 132
-      Width = 736
-      Height = 17
-      AutoSize = False
-      Caption = 'Ficheiro:'
-    end
-    object grpConn: TGroupBox
-      Left = 12
-      Top = 156
-      Width = 736
-      Height = 84
-      Caption = 'Ligacao (API estilo OpenAI)'
-      TabOrder = 2
-      object lblUrl: TLabel
+    object tabPrompt: TTabSheet
+      Caption = 'Pedido'
+      object lblPrompt: TLabel
         Left = 12
-        Top = 24
-        Width = 52
+        Top = 8
+        Width = 38
         Height = 17
-        Caption = 'Endpoint'
+        Caption = 'Prompt'
       end
-      object edtUrl: TEdit
-        Left = 100
-        Top = 21
-        Width = 616
-        Height = 25
+      object memPrompt: TMemo
+        Left = 12
+        Top = 28
+        Width = 720
+        Height = 120
+        Anchors = [akLeft, akTop, akRight]
+        ScrollBars = ssVertical
         TabOrder = 0
+        WantReturns = True
+        WordWrap = True
       end
-      object lblModel: TLabel
+      object chkSelOnly: TCheckBox
         Left = 12
-        Top = 52
-        Width = 40
+        Top = 156
+        Width = 400
         Height = 17
-        Caption = 'Modelo'
-      end
-      object edtModel: TEdit
-        Left = 100
-        Top = 49
-        Width = 200
-        Height = 25
+        Caption = 'Apenas texto selecionado (senao, ficheiro inteiro)'
         TabOrder = 1
       end
-      object lblKey: TLabel
-        Left = 320
-        Top = 52
-        Width = 48
+      object lblFile: TLabel
+        Left = 12
+        Top = 180
+        Width = 720
         Height = 17
-        Caption = 'API Key'
+        Anchors = [akLeft, akTop, akRight]
+        AutoSize = False
+        Caption = 'Ficheiro:'
       end
-      object edtApiKey: TEdit
-        Left = 380
-        Top = 49
-        Width = 336
-        Height = 25
-        PasswordChar = '*'
-        TabOrder = 2
+    end
+    object tabApi: TTabSheet
+      Caption = 'Ligacao API'
+      object grpConn: TGroupBox
+        Left = 0
+        Top = 0
+        Width = 752
+        Height = 228
+        Align = alClient
+        Caption = 'Endpoint e credenciais (API estilo OpenAI)'
+        TabOrder = 0
+        object lblUrl: TLabel
+          Left = 12
+          Top = 24
+          Width = 52
+          Height = 17
+          Caption = 'Endpoint'
+        end
+        object edtUrl: TEdit
+          Left = 12
+          Top = 44
+          Width = 712
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+        end
+        object lblModel: TLabel
+          Left = 12
+          Top = 80
+          Width = 40
+          Height = 17
+          Caption = 'Modelo'
+        end
+        object edtModel: TEdit
+          Left = 12
+          Top = 100
+          Width = 400
+          Height = 25
+          TabOrder = 1
+        end
+        object lblKey: TLabel
+          Left = 12
+          Top = 136
+          Width = 48
+          Height = 17
+          Caption = 'API Key'
+        end
+        object edtApiKey: TEdit
+          Left = 12
+          Top = 156
+          Width = 712
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          PasswordChar = '*'
+          TabOrder = 2
+        end
       end
     end
   end
@@ -116,7 +126,7 @@ object frmGhiComposer: TfrmGhiComposer
     Height = 40
     Align = alBottom
     BevelOuter = bvNone
-    TabOrder = 1
+    TabOrder = 2
     object btnRun: TButton
       Left = 12
       Top = 6
@@ -140,7 +150,7 @@ object frmGhiComposer: TfrmGhiComposer
   end
   object lblStatus: TLabel
     Left = 0
-    Top = 248
+    Top = 260
     Width = 760
     Height = 17
     Align = alTop
@@ -148,13 +158,13 @@ object frmGhiComposer: TfrmGhiComposer
   end
   object memStatus: TMemo
     Left = 0
-    Top = 265
+    Top = 277
     Width = 760
-    Height = 255
+    Height = 243
     Align = alClient
     ReadOnly = True
     ScrollBars = ssBoth
-    TabOrder = 2
+    TabOrder = 1
     WordWrap = False
   end
 end
