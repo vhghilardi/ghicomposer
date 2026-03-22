@@ -11,10 +11,11 @@ uses
   Vcl.Forms,
   Vcl.Dialogs,
   Vcl.StdCtrls,
-  Vcl.ExtCtrls;
+  Vcl.ExtCtrls,
+  DockForm;
 
 type
-  TfrmGhiComposer = class(TForm)
+  TfrmGhiComposer = class(TDockableForm)
     pnlTop: TPanel;
     lblPrompt: TLabel;
     memPrompt: TMemo;
@@ -35,6 +36,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnRunClick(Sender: TObject);
     procedure btnCloseClick(Sender: TObject);
   private
@@ -104,7 +106,16 @@ end;
 
 procedure TfrmGhiComposer.FormCreate(Sender: TObject);
 begin
+  AutoSave := True;
+  SaveStateNecessary := True;
+  DeskSection := 'GhiComposer';
   FIniPath := ConfigPath;
+end;
+
+procedure TfrmGhiComposer.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  SaveSettings;
+  Action := caHide;
 end;
 
 procedure TfrmGhiComposer.FormDestroy(Sender: TObject);

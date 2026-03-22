@@ -5,6 +5,8 @@ interface
 uses
   ToolsAPI;
 
+procedure GhiRegisterDockableForm;
+
 type
   TGhiComposerMenuWizard = class(TNotifierObject, IOTAWizard, IOTAMenuWizard)
   private
@@ -27,7 +29,17 @@ type
 implementation
 
 uses
+  DeskUtil,
   uGhiComposerForm;
+
+var
+  GhiComposerDockForm: TfrmGhiComposer;
+
+procedure GhiRegisterDockableForm;
+begin
+  RegisterFieldAddress('GhiComposerDockForm', @GhiComposerDockForm);
+  RegisterDesktopFormClass(TfrmGhiComposer, 'GhiComposer', 'GhiComposerDockForm');
+end;
 
 { TGhiComposerMenuWizard }
 
@@ -73,7 +85,7 @@ end;
 
 function TGhiComposerMenuWizard.GetPage: string;
 begin
-  Result := '';
+  Result := 'Tools';
 end;
 
 function TGhiComposerMenuWizard.GetState: TWizardState;
@@ -82,15 +94,14 @@ begin
 end;
 
 procedure TGhiComposerMenuWizard.ShowComposer;
-var
-  F: TfrmGhiComposer;
 begin
-  F := TfrmGhiComposer.Create(nil);
-  try
-    F.ShowModal;
-  finally
-    F.Free;
-  end;
+  if GhiComposerDockForm = nil then
+    GhiComposerDockForm := TfrmGhiComposer.Create(nil);
+  GhiComposerDockForm.Show;
+  GhiComposerDockForm.BringToFront;
 end;
+
+finalization
+  FreeAndNil(GhiComposerDockForm);
 
 end.

@@ -12,6 +12,7 @@ uses
 
 procedure Register;
 begin
+  GhiRegisterDockableForm;
   RegisterPackageWizard(TGhiComposerMenuWizard.Create);
 end;
 
