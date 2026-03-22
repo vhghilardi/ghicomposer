@@ -38,11 +38,12 @@ O texto retornado pelo modelo aparece na área **Resultado / status** antes de v
 
 - **Chat** — prompt e opções do editor.
 - **API** — URL, modelo e chave.
-- **Opções avançadas** — prompt de sistema, timeouts HTTP, remoção de cercas markdown, temperatura e *max tokens* (gravados no mesmo INI).
+
+O prompt de sistema enviado ao modelo, timeouts HTTP (60 s / 120 s) e remoção de cercas markdown na resposta ficam **fixos no código** (`uGhiComposerForm.pas` / `GhiComposer.AI.pas`).
 
 ## Configuração persistente
 
-As configurações (URL, modelo, API key, opções de seleção e avançadas) são salvas em um arquivo **INI**:
+As configurações (URL, modelo, API key e opção de só seleção) são salvas em um arquivo **INI**:
 
 - **Windows**: em geral `Documentos\GhiComposer.ini` (pasta Documentos do usuário).
 
@@ -73,6 +74,7 @@ O GhiComposer atua sobre o **conteúdo que o IDE mostra no editor de código**. 
 - **Nada acontece no editor**: confirme que há um módulo de código ativo e que você confirmou a substituição na caixa de diálogo.
 - **Erro HTTP / JSON**: verifique URL, key, modelo e cotas do provedor; leia a mensagem na área de status.
 - **Compilação**: em Delphi mais antigo, se `IOTAEditWriter.Insert(string)` não existir, pode ser necessário usar `Insert` com buffer UTF-8 conforme a sua `ToolsAPI.pas`.
+- **Acentos na interface**: textos com acentuação vêm do `.pas` (UTF-8) em tempo de execução; o `.dfm` evita caracteres acentuados para não haver mistura de encoding no designer.
 
 ## Licença
 

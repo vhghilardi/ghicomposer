@@ -20,7 +20,6 @@ type
     pgcMain: TPageControl;
     tabChat: TTabSheet;
     tabApi: TTabSheet;
-    tabAdvanced: TTabSheet;
     lblPrompt: TLabel;
     memPrompt: TMemo;
     chkSelOnly: TCheckBox;
@@ -32,18 +31,6 @@ type
     edtModel: TEdit;
     lblKey: TLabel;
     edtApiKey: TEdit;
-    grpAdvanced: TGroupBox;
-    lblSystemPrompt: TLabel;
-    memSystemPrompt: TMemo;
-    lblConnTimeout: TLabel;
-    edtConnTimeout: TEdit;
-    lblRespTimeout: TLabel;
-    edtRespTimeout: TEdit;
-    chkStripFences: TCheckBox;
-    lblTemperature: TLabel;
-    edtTemperature: TEdit;
-    lblMaxTokens: TLabel;
-    edtMaxTokens: TEdit;
     pnlBottom: TPanel;
     btnRun: TButton;
     btnClose: TButton;
@@ -57,6 +44,7 @@ type
     procedure btnCloseClick(Sender: TObject);
   private
     FIniPath: string;
+    procedure ApplyLocalizedCaptions;
     procedure LoadSettings;
     procedure SaveSettings;
     function ConfigPath: string;
@@ -84,46 +72,16 @@ const
     'Responda apenas com o código-fonte completo resultante (sem explicações fora do código, sem cercas markdown). ' +
     'Preserve a codificação e as convenções do arquivo.';
 
-function IniEncodeEscapedLines(const S: string): string;
-begin
-  Result := StringReplace(S, '\', '\\', [rfReplaceAll]);
-  Result := StringReplace(Result, #13#10, '\n', [rfReplaceAll]);
-  Result := StringReplace(Result, #13, '\n', [rfReplaceAll]);
-  Result := StringReplace(Result, #10, '\n', [rfReplaceAll]);
-end;
-
-function IniDecodeEscapedLines(const S: string): string;
-var
-  I: Integer;
-begin
-  Result := '';
-  I := 1;
-  while I <= Length(S) do
-  begin
-    if (S[I] = '\') and (I < Length(S)) then
-    begin
-      Inc(I);
-      case S[I] of
-        'n':
-          Result := Result + sLineBreak;
-        '\':
-          Result := Result + '\';
-      else
-        Result := Result + '\' + S[I];
-      end;
-      Inc(I);
-    end
-    else
-    begin
-      Result := Result + S[I];
-      Inc(I);
-    end;
-  end;
-end;
-
 function TfrmGhiComposer.ConfigPath: string;
 begin
   Result := TPath.Combine(TPath.GetDocumentsPath, 'GhiComposer.ini');
+end;
+
+procedure TfrmGhiComposer.ApplyLocalizedCaptions;
+begin
+  chkSelOnly.Caption := 'Apenas texto selecionado (senão, arquivo inteiro)';
+  grpConn.Caption := 'Endpoint e credenciais (API no estilo OpenAI)';
+  lblStatus.Caption := 'Resultado / status';
 end;
 
 procedure TfrmGhiComposer.LoadSettings;
@@ -138,12 +96,6 @@ begin
     edtModel.Text := Ini.ReadString('api', 'model', cDefModel);
     edtApiKey.Text := Ini.ReadString('api', 'key', '');
     chkSelOnly.Checked := Ini.ReadBool('editor', 'selection_only', False);
-    memSystemPrompt.Text := IniDecodeEscapedLines(Ini.ReadString('advanced', 'system_prompt', ''));
-    edtConnTimeout.Text := Ini.ReadString('advanced', 'conn_timeout_ms', '60000');
-    edtRespTimeout.Text := Ini.ReadString('advanced', 'resp_timeout_ms', '120000');
-    chkStripFences.Checked := Ini.ReadBool('advanced', 'strip_fences', True);
-    edtTemperature.Text := Ini.ReadString('advanced', 'temperature', '');
-    edtMaxTokens.Text := Ini.ReadString('advanced', 'max_tokens', '');
   finally
     Ini.Free;
   end;
@@ -159,12 +111,6 @@ begin
     Ini.WriteString('api', 'model', edtModel.Text);
     Ini.WriteString('api', 'key', edtApiKey.Text);
     Ini.WriteBool('editor', 'selection_only', chkSelOnly.Checked);
-    Ini.WriteString('advanced', 'system_prompt', IniEncodeEscapedLines(memSystemPrompt.Text));
-    Ini.WriteString('advanced', 'conn_timeout_ms', edtConnTimeout.Text);
-    Ini.WriteString('advanced', 'resp_timeout_ms', edtRespTimeout.Text);
-    Ini.WriteBool('advanced', 'strip_fences', chkStripFences.Checked);
-    Ini.WriteString('advanced', 'temperature', edtTemperature.Text);
-    Ini.WriteString('advanced', 'max_tokens', edtMaxTokens.Text);
   finally
     Ini.Free;
   end;
@@ -176,6 +122,7 @@ begin
   SaveStateNecessary := True;
   DeskSection := 'GhiComposer';
   FIniPath := ConfigPath;
+  ApplyLocalizedCaptions;
 end;
 
 procedure TfrmGhiComposer.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -201,10 +148,6 @@ begin
     edtUrl.Text := cDefUrl;
   if edtModel.Text = '' then
     edtModel.Text := cDefModel;
-  if Trim(edtConnTimeout.Text) = '' then
-    edtConnTimeout.Text := '60000';
-  if Trim(edtRespTimeout.Text) = '' then
-    edtRespTimeout.Text := '120000';
   lblFile.Caption := 'Arquivo: (nenhum editor de código ativo)';
   if GhiTryGetActiveSourceEditor(Ed, V) then
     lblFile.Caption := 'Arquivo: ' + GhiGetActiveFileName(Ed);
@@ -223,11 +166,7 @@ var
   HasSel: Boolean;
   Cfg: TGhiAIConfig;
   UserBlock: string;
-  InvFS: TFormatSettings;
 begin
-  InvFS := FormatSettings;
-  InvFS.DecimalSeparator := '.';
-  InvFS.ThousandSeparator := ',';
   memStatus.Clear;
   if not GhiTryGetActiveSourceEditor(Ed, V) then
   begin
@@ -278,20 +217,6 @@ begin
   Cfg.Endpoint := Trim(edtUrl.Text);
   Cfg.Model := Trim(edtModel.Text);
   Cfg.ApiKey := Trim(edtApiKey.Text);
-  Cfg.ConnectionTimeoutMs := StrToIntDef(Trim(edtConnTimeout.Text), 60000);
-  Cfg.ResponseTimeoutMs := StrToIntDef(Trim(edtRespTimeout.Text), 120000);
-  Cfg.StripMarkdownFences := chkStripFences.Checked;
-  Cfg.MaxTokens := StrToIntDef(Trim(edtMaxTokens.Text), 0);
-  if Cfg.MaxTokens < 0 then
-    Cfg.MaxTokens := 0;
-  if Trim(edtTemperature.Text) = '' then
-    Cfg.Temperature := -1
-  else if not TryStrToFloat(Trim(edtTemperature.Text), Cfg.Temperature, InvFS) then
-  begin
-    memStatus.Lines.Add('Temperatura inválida (use ponto decimal, ex.: 0.7). Veja Opções avançadas.');
-    pgcMain.ActivePage := tabAdvanced;
-    Exit;
-  end;
 
   UserBlock :=
     'Arquivo: ' + GhiGetActiveFileName(Ed) + sLineBreak +
@@ -299,8 +224,7 @@ begin
     sLineBreak + 'Pedido:' + sLineBreak + memPrompt.Text + sLineBreak + sLineBreak +
     'Código atual:' + sLineBreak + Code;
 
-  Err := GhiChatCompletion(Cfg, IfThen(Trim(memSystemPrompt.Text) <> '',
-    memSystemPrompt.Text, cSysPrompt), UserBlock, OutText);
+  Err := GhiChatCompletion(Cfg, cSysPrompt, UserBlock, OutText);
   if Err <> '' then
   begin
     memStatus.Lines.Add(Err);
