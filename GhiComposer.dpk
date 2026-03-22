@@ -14,6 +14,7 @@ requires
   designide;
 
 contains
+  GhiComposer.DockRef in 'Sources\GhiComposer.DockRef.pas',
   GhiComposer.Register in 'Sources\GhiComposer.Register.pas',
   GhiComposer.Wizard in 'Sources\GhiComposer.Wizard.pas',
   GhiComposer.Editor in 'Sources\GhiComposer.Editor.pas',

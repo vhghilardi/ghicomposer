@@ -56,6 +56,7 @@ uses
   System.IniFiles,
   System.StrUtils,
   ToolsAPI,
+  GhiComposer.DockRef,
   GhiComposer.Editor,
   GhiComposer.AI;
 
@@ -120,6 +121,8 @@ end;
 
 procedure TfrmGhiComposer.FormDestroy(Sender: TObject);
 begin
+  if GhiComposerDockForm = Self then
+    GhiComposerDockForm := nil;
   SaveSettings;
 end;
 

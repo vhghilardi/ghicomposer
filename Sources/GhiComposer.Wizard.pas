@@ -29,12 +29,9 @@ type
 implementation
 
 uses
-  System.SysUtils,
   DeskUtil,
+  GhiComposer.DockRef,
   uGhiComposerForm;
-
-var
-  GhiComposerDockForm: TfrmGhiComposer;
 
 procedure GhiRegisterDockableForm;
 begin
@@ -95,16 +92,14 @@ begin
 end;
 
 procedure TGhiComposerMenuWizard.ShowComposer;
+var
+  F: TfrmGhiComposer;
 begin
   if GhiComposerDockForm = nil then
     GhiComposerDockForm := TfrmGhiComposer.Create(nil);
-  GhiComposerDockForm.Show;
-  GhiComposerDockForm.BringToFront;
+  F := TfrmGhiComposer(GhiComposerDockForm);
+  F.Show;
+  F.BringToFront;
 end;
-
-initialization
-
-finalization
-  FreeAndNil(GhiComposerDockForm);
 
 end.
