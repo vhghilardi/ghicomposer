@@ -1,4 +1,4 @@
-unit GhiComposer.AI;
+﻿unit GhiComposer.AI;
 
 interface
 
@@ -21,10 +21,8 @@ function GhiChatCompletion(const Cfg: TGhiAIConfig; const ASystemPrompt, AUserPr
 implementation
 
 uses
-  System.Classes,
   System.JSON,
-  System.Net.HttpClient,
-  System.SysUtils;
+  System.Net.HttpClient;
 
 function GhiModelsUrlFromChatEndpoint(const ChatEndpoint: string): string;
 var
