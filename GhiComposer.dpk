@@ -1,0 +1,23 @@
+package GhiComposer;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$IMPLICITBUILD OFF}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'GhiComposer - Assistente de codigo com IA (OTA)'}
+{$DESIGNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  designide;
+
+contains
+  GhiComposer.Register in 'Sources\GhiComposer.Register.pas',
+  GhiComposer.Wizard in 'Sources\GhiComposer.Wizard.pas',
+  GhiComposer.Editor in 'Sources\GhiComposer.Editor.pas',
+  GhiComposer.AI in 'Sources\GhiComposer.AI.pas',
+  uGhiComposerForm in 'Sources\uGhiComposerForm.pas' {frmGhiComposer};
+
+end.
