@@ -29,6 +29,7 @@ type
 implementation
 
 uses
+  System.SysUtils,
   DeskUtil,
   uGhiComposerForm;
 
@@ -100,6 +101,8 @@ begin
   GhiComposerDockForm.Show;
   GhiComposerDockForm.BringToFront;
 end;
+
+initialization
 
 finalization
   FreeAndNil(GhiComposerDockForm);
