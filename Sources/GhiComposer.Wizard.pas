@@ -53,7 +53,7 @@ end;
 
 function TGhiComposerMenuWizard.GetComment: string;
 begin
-  Result := 'Abre o GhiComposer para pedir correcoes e geracao de codigo no editor ativo (.pas / .dfm).';
+  Result := 'Abre o GhiComposer para solicitar correções e geração de código no editor ativo (.pas / .dfm).';
 end;
 
 function TGhiComposerMenuWizard.GetDesigner: string;

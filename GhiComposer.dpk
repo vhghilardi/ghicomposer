@@ -4,7 +4,7 @@ package GhiComposer;
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$IMPLICITBUILD OFF}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'GhiComposer - Assistente de codigo com IA (OTA)'}
+{$DESCRIPTION 'GhiComposer - Assistente de código com IA (OTA)'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 

@@ -10,6 +10,11 @@ type
     Endpoint: string;
     Model: string;
     ApiKey: string;
+    ConnectionTimeoutMs: Integer;
+    ResponseTimeoutMs: Integer;
+    Temperature: Double;
+    MaxTokens: Integer;
+    StripMarkdownFences: Boolean;
   end;
 
 function GhiChatCompletion(const Cfg: TGhiAIConfig; const ASystemPrompt, AUserPrompt: string;
@@ -85,6 +90,10 @@ begin
     Msg.AddPair('content', AUserPrompt);
     Arr.AddElement(Msg);
     Root.AddPair('messages', Arr);
+    if Cfg.Temperature >= 0 then
+      Root.AddPair('temperature', Cfg.Temperature);
+    if Cfg.MaxTokens > 0 then
+      Root.AddPair('max_tokens', Cfg.MaxTokens);
     Body := Root.ToJSON;
   finally
     Root.Free;
@@ -95,8 +104,14 @@ begin
   try
     Client.CustomHeaders['Authorization'] := 'Bearer ' + Cfg.ApiKey;
     Client.CustomHeaders['Content-Type'] := 'application/json';
-    Client.ConnectionTimeout := 60000;
-    Client.ResponseTimeout := 120000;
+    if Cfg.ConnectionTimeoutMs < 1000 then
+      Client.ConnectionTimeout := 60000
+    else
+      Client.ConnectionTimeout := Cfg.ConnectionTimeoutMs;
+    if Cfg.ResponseTimeoutMs < 1000 then
+      Client.ResponseTimeout := 120000
+    else
+      Client.ResponseTimeout := Cfg.ResponseTimeoutMs;
     ReqStream.Position := 0;
     Resp := Client.Post(Cfg.Endpoint, ReqStream);
     Raw := Resp.ContentAsString(TEncoding.UTF8);
@@ -109,23 +124,24 @@ begin
 
   V := TJSONObject.ParseJSONValue(Raw);
   if V = nil then
-    Exit('Resposta JSON invalida.');
+    Exit('Resposta JSON inválida.');
 
   try
     if not (V is TJSONObject) then
-      Exit('Resposta nao e objeto JSON.');
+      Exit('A resposta não é um objeto JSON.');
     Root := TJSONObject(V);
 
     if Root.TryGetValue<TJSONArray>('choices', Choices) and (Choices.Count > 0) then
     begin
       Choice := Choices.Items[0] as TJSONObject;
       if Choice = nil then
-        Exit('choices[0] invalido.');
+        Exit('choices[0] inválido.');
       if not Choice.TryGetValue<TJSONObject>('message', Msg) then
-        Exit('message em falta na resposta.');
+        Exit('Campo "message" ausente na resposta.');
       if not Msg.TryGetValue<string>('content', AContent) then
-        Exit('content em falta na resposta.');
-      AContent := StripCodeFences(AContent);
+        Exit('Campo "content" ausente na resposta.');
+      if Cfg.StripMarkdownFences then
+        AContent := StripCodeFences(AContent);
       Exit('');
     end;
 
@@ -133,7 +149,7 @@ begin
     begin
       if not ErrObj.TryGetValue<string>('message', Raw) then
         Raw := ErrObj.ToString;
-      Exit('Erro API: ' + Raw);
+      Exit('Erro da API: ' + Raw);
     end;
 
     Exit('Formato de resposta inesperado.');
