@@ -19,6 +19,19 @@ function GhiReadScope(const AEditor: IOTASourceEditor; const AView: IOTAEditView
   ASelectionOnly: Boolean; out AText: string; out AHasSelection: Boolean): Boolean;
 function GhiReplaceScope(const AEditor: IOTASourceEditor; const AView: IOTAEditView;
   const ANewText: string; ASelectionOnly: Boolean): Boolean;
+/// <summary>
+/// Abre/foca um arquivo no IDE (para aplicar .pas + .dfm em sequência).
+/// </summary>
+function GhiIdeOpenFile(const AFileName: string): Boolean;
+/// <summary>
+/// Se a unit ativa for .pas e o módulo tiver .dfm/.fmx, devolve o IOTASourceEditor do stream do form.
+/// </summary>
+function GhiTryGetCompanionFormStreamEditor(const APasEditor: IOTASourceEditor;
+  out AFormStreamEditor: IOTASourceEditor): Boolean;
+/// <summary>
+/// Lê o buffer inteiro do editor de fonte (ex.: .dfm ainda sem vista — tenta Show até obter vista).
+/// </summary>
+function GhiReadEntireSourceBuffer(const ASE: IOTASourceEditor; out AText: string): Boolean;
 
 implementation
 
@@ -35,8 +48,8 @@ begin
   Result := AEditor.FileName;
 end;
 
-function GhiFindFormStreamSourceEditor(const AModule: IOTAModule;
-  out AEditor: IOTAEditor): Boolean;
+function GhiTryGetFormStreamSourceEditor(const AModule: IOTAModule;
+  out ASE: IOTASourceEditor): Boolean;
 var
   I, N: Integer;
   E: IOTAEditor;
@@ -44,7 +57,7 @@ var
   Ext: string;
 begin
   Result := False;
-  AEditor := nil;
+  ASE := nil;
   if AModule = nil then
     Exit;
   N := AModule.GetModuleFileCount;
@@ -56,11 +69,23 @@ begin
       Continue;
     if Supports(E, IOTASourceEditor, S) then
     begin
-      AEditor := E;
+      ASE := S;
       Result := True;
       Exit;
     end;
   end;
+end;
+
+function GhiFindFormStreamSourceEditor(const AModule: IOTAModule;
+  out AEditor: IOTAEditor): Boolean;
+var
+  S: IOTASourceEditor;
+begin
+  Result := GhiTryGetFormStreamSourceEditor(AModule, S);
+  if Result then
+    AEditor := S as IOTAEditor
+  else
+    AEditor := nil;
 end;
 
 function GhiTryEnsureFormStreamTextView(out AError: string): Boolean;
@@ -260,6 +285,72 @@ begin
   Writer.DeleteTo(EndPos);
   StringToUtf8Insert(Writer, ANewText);
   Result := True;
+end;
+
+function GhiIdeOpenFile(const AFileName: string): Boolean;
+var
+  Act: IOTAActionServices;
+begin
+  Result := False;
+  if Trim(AFileName) = '' then
+    Exit;
+  if not Supports(BorlandIDEServices, IOTAActionServices, Act) then
+    Exit;
+  Act.OpenFile(AFileName);
+  Application.ProcessMessages;
+  Result := True;
+end;
+
+function GhiTryGetCompanionFormStreamEditor(const APasEditor: IOTASourceEditor;
+  out AFormStreamEditor: IOTASourceEditor): Boolean;
+var
+  Ext, PasFn, DfmFn: string;
+  M: IOTAModule;
+  Dfm: IOTASourceEditor;
+begin
+  Result := False;
+  AFormStreamEditor := nil;
+  if APasEditor = nil then
+    Exit;
+  PasFn := GhiGetActiveFileName(APasEditor);
+  Ext := LowerCase(ExtractFileExt(PasFn));
+  if Ext <> '.pas' then
+    Exit;
+  M := APasEditor.Module;
+  if M = nil then
+    Exit;
+  if not GhiTryGetFormStreamSourceEditor(M, Dfm) or (Dfm = nil) then
+    Exit;
+  DfmFn := GhiOtaEditorFileName(Dfm as IOTAEditor);
+  if SameText(PasFn, DfmFn) then
+    Exit;
+  AFormStreamEditor := Dfm;
+  Result := True;
+end;
+
+function GhiReadEntireSourceBuffer(const ASE: IOTASourceEditor; out AText: string): Boolean;
+var
+  V: IOTAEditView;
+  Dummy: Boolean;
+  Attempt: Integer;
+  N: Integer;
+begin
+  AText := '';
+  Result := False;
+  if ASE = nil then
+    Exit;
+  for Attempt := 0 to 2 do
+  begin
+    N := ASE.GetEditViewCount;
+    if N > 0 then
+    begin
+      V := ASE.GetEditView(0);
+      if (V <> nil) and GhiReadScope(ASE, V, False, AText, Dummy) then
+        Exit(True);
+    end;
+    (ASE as IOTAEditor).Show;
+    Application.ProcessMessages;
+  end;
 end;
 
 end.

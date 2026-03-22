@@ -10,6 +10,13 @@ procedure GhiRichEditAppendPlain(R: TRichEdit; const S: string);
 
 procedure GhiShowLineDiffInRichEdit(R: TRichEdit; const OldText, NewText: string);
 
+/// <summary>Marca que o modelo deve usar entre .pas e .dfm na resposta.</summary>
+function GhiPasDfmSplitMarker: string;
+
+/// <summary>Divide a resposta da IA em parte .pas e parte .dfm quando a marca existe.</summary>
+procedure GhiSplitPasDfmAiResponse(const AResponse: string; out APasPart, ADfmPart: string;
+  out AHasDfm: Boolean);
+
 implementation
 
 uses
@@ -29,6 +36,47 @@ type
     Kind: TLineDiffKind;
     Line: string;
   end;
+
+function GhiPasDfmSplitMarker: string;
+begin
+  Result := '---GHI_SPLIT_DFM---';
+end;
+
+procedure GhiSplitPasDfmAiResponse(const AResponse: string; out APasPart, ADfmPart: string;
+  out AHasDfm: Boolean);
+var
+  L, Part: TStringList;
+  I, J: Integer;
+  Mark: string;
+begin
+  AHasDfm := False;
+  APasPart := AResponse;
+  ADfmPart := '';
+  Mark := GhiPasDfmSplitMarker;
+  L := TStringList.Create;
+  Part := TStringList.Create;
+  try
+    L.Text := AResponse;
+    for I := 0 to L.Count - 1 do
+    begin
+      if Trim(L[I]) <> Mark then
+        Continue;
+      Part.Clear;
+      for J := 0 to I - 1 do
+        Part.Add(L[J]);
+      APasPart := Part.Text;
+      Part.Clear;
+      for J := I + 1 to L.Count - 1 do
+        Part.Add(L[J]);
+      ADfmPart := Part.Text;
+      AHasDfm := True;
+      Exit;
+    end;
+  finally
+    Part.Free;
+    L.Free;
+  end;
+end;
 
 procedure GhiRichEditAppendPlain(R: TRichEdit; const S: string);
 var
