@@ -24,26 +24,24 @@ Após instalar, o expert aparece no menu com o texto **GhiComposer...** (a local
 3. Abra **GhiComposer...** pelo menu do expert.
 4. Escreva o **prompt** (o que você quer que o modelo faça).
 5. Configure a conexão na aba **API**:
-   - **Endpoint** — padrão: `https://api.openai.com/v1/chat/completions`
-   - **Modelo** — por exemplo: `gpt-4o-mini`
+   - **Endpoint** — padrão: `https://api.openai.com/v1/chat/completions` (o GhiComposer deriva `.../v1/models` para listar modelos)
+   - **Modelo** — combo editável; padrão sugerido `gpt-4o-mini`. Use **Atualizar lista de modelos** (GET com a mesma API key) para preencher a lista; ainda é possível digitar um id que não apareça na lista.
    - **API Key** — chave do seu provedor
-6. Opção **Apenas texto selecionado**:
-   - **Marcada**: envia e substitui só a região selecionada (é obrigatório haver seleção).
-   - **Desmarcada**: envia o **arquivo inteiro** e pode substituir tudo no editor.
-7. Clique em **Executar**. Quando a resposta chegar, confirme se deseja **substituir o código no editor**.
+6. Clique em **Executar**. Se houver **texto selecionado** no editor, o GhiComposer pergunta se você quer usar **só a seleção** ou o **arquivo inteiro** (e **Cancelar** para não enviar o pedido). Sem seleção, o contexto é sempre o arquivo inteiro.
+7. Quando a resposta chegar, confirme se deseja **substituir o código no editor** (na mesma base: só seleção ou arquivo inteiro, conforme a escolha anterior).
 
-O texto retornado pelo modelo aparece na área **Resultado / status** antes de você aplicar.
+O resultado aparece na área **Resultado / diff**: comparação **linha a linha** com fundo **vermelho** (removido) e **verde** (adicionado), no estilo de revisão de código. Trechos muito grandes usam apenas o texto novo com realce verde.
 
 ### Abas
 
-- **Chat** — prompt e opções do editor.
+- **Chat** — prompt e indicação do arquivo ativo no editor.
 - **API** — URL, modelo e chave.
 
 O prompt de sistema enviado ao modelo, timeouts HTTP (60 s / 120 s) e remoção de cercas markdown na resposta ficam **fixos no código** (`uGhiComposerForm.pas` / `GhiComposer.AI.pas`).
 
 ## Configuração persistente
 
-As configurações (URL, modelo, API key e opção de só seleção) são salvas em um arquivo **INI**:
+As configurações (URL, modelo e API key) são salvas em um arquivo **INI**:
 
 - **Windows**: em geral `Documentos\GhiComposer.ini` (pasta Documentos do usuário).
 
@@ -72,7 +70,7 @@ O GhiComposer atua sobre o **conteúdo que o IDE mostra no editor de código**. 
 ## Resolução de problemas
 
 - **Nada acontece no editor**: confirme que há um módulo de código ativo e que você confirmou a substituição na caixa de diálogo.
-- **Erro HTTP / JSON**: verifique URL, key, modelo e cotas do provedor; leia a mensagem na área de status.
+- **Erro HTTP / JSON**: verifique URL, key, modelo e cotas do provedor; leia a mensagem na área de resultado / diff.
 - **Compilação**: em Delphi mais antigo, se `IOTAEditWriter.Insert(string)` não existir, pode ser necessário usar `Insert` com buffer UTF-8 conforme a sua `ToolsAPI.pas`.
 - **Acentos na interface**: textos com acentuação vêm do `.pas` (UTF-8) em tempo de execução; o `.dfm` evita caracteres acentuados para não haver mistura de encoding no designer.
 

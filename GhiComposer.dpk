@@ -19,6 +19,7 @@ contains
   GhiComposer.Wizard in 'Sources\GhiComposer.Wizard.pas',
   GhiComposer.Editor in 'Sources\GhiComposer.Editor.pas',
   GhiComposer.AI in 'Sources\GhiComposer.AI.pas',
+  GhiComposer.Diff in 'Sources\GhiComposer.Diff.pas',
   uGhiComposerForm in 'Sources\uGhiComposerForm.pas' {frmGhiComposer};
 
 end.

@@ -22,19 +22,19 @@ type
     tabApi: TTabSheet;
     lblPrompt: TLabel;
     memPrompt: TMemo;
-    chkSelOnly: TCheckBox;
     lblFile: TLabel;
     grpConn: TGroupBox;
     lblUrl: TLabel;
     edtUrl: TEdit;
     lblModel: TLabel;
-    edtModel: TEdit;
+    cboModel: TComboBox;
+    btnRefreshModels: TButton;
     lblKey: TLabel;
     edtApiKey: TEdit;
     pnlBottom: TPanel;
     btnRun: TButton;
     btnClose: TButton;
-    memStatus: TMemo;
+    reStatus: TRichEdit;
     lblStatus: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -42,9 +42,12 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnRunClick(Sender: TObject);
     procedure btnCloseClick(Sender: TObject);
+    procedure btnRefreshModelsClick(Sender: TObject);
   private
     FIniPath: string;
     procedure ApplyLocalizedCaptions;
+    procedure SyncModelAfterIni(const AModel: string);
+    procedure SyncModelComboAfterLoad;
     procedure LoadSettings;
     procedure SaveSettings;
     function ConfigPath: string;
@@ -62,7 +65,8 @@ uses
   ToolsAPI,
   GhiComposer.DockRef,
   GhiComposer.Editor,
-  GhiComposer.AI;
+  GhiComposer.AI,
+  GhiComposer.Diff;
 
 const
   cDefUrl = 'https://api.openai.com/v1/chat/completions';
@@ -79,9 +83,29 @@ end;
 
 procedure TfrmGhiComposer.ApplyLocalizedCaptions;
 begin
-  chkSelOnly.Caption := 'Apenas texto selecionado (senão, arquivo inteiro)';
   grpConn.Caption := 'Endpoint e credenciais (API no estilo OpenAI)';
-  lblStatus.Caption := 'Resultado / status';
+  lblStatus.Caption := 'Resultado / diff';
+  btnRefreshModels.Caption := 'Atualizar lista de modelos';
+end;
+
+procedure TfrmGhiComposer.SyncModelAfterIni(const AModel: string);
+var
+  Idx: Integer;
+begin
+  cboModel.Text := AModel;
+  Idx := cboModel.Items.IndexOf(AModel);
+  if Idx >= 0 then
+    cboModel.ItemIndex := Idx;
+end;
+
+procedure TfrmGhiComposer.SyncModelComboAfterLoad;
+var
+  M: string;
+begin
+  M := Trim(cboModel.Text);
+  if M = '' then
+    M := cDefModel;
+  SyncModelAfterIni(M);
 end;
 
 procedure TfrmGhiComposer.LoadSettings;
@@ -93,9 +117,8 @@ begin
   Ini := TIniFile.Create(FIniPath);
   try
     edtUrl.Text := Ini.ReadString('api', 'url', cDefUrl);
-    edtModel.Text := Ini.ReadString('api', 'model', cDefModel);
+    cboModel.Text := Ini.ReadString('api', 'model', cDefModel);
     edtApiKey.Text := Ini.ReadString('api', 'key', '');
-    chkSelOnly.Checked := Ini.ReadBool('editor', 'selection_only', False);
   finally
     Ini.Free;
   end;
@@ -108,9 +131,8 @@ begin
   Ini := TIniFile.Create(FIniPath);
   try
     Ini.WriteString('api', 'url', edtUrl.Text);
-    Ini.WriteString('api', 'model', edtModel.Text);
+    Ini.WriteString('api', 'model', Trim(cboModel.Text));
     Ini.WriteString('api', 'key', edtApiKey.Text);
-    Ini.WriteBool('editor', 'selection_only', chkSelOnly.Checked);
   finally
     Ini.Free;
   end;
@@ -123,6 +145,8 @@ begin
   DeskSection := 'GhiComposer';
   FIniPath := ConfigPath;
   ApplyLocalizedCaptions;
+  reStatus.Font.Name := 'Consolas';
+  reStatus.Font.Size := 10;
 end;
 
 procedure TfrmGhiComposer.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -146,8 +170,7 @@ begin
   LoadSettings;
   if edtUrl.Text = '' then
     edtUrl.Text := cDefUrl;
-  if edtModel.Text = '' then
-    edtModel.Text := cDefModel;
+  SyncModelComboAfterLoad;
   lblFile.Caption := 'Arquivo: (nenhum editor de código ativo)';
   if GhiTryGetActiveSourceEditor(Ed, V) then
     lblFile.Caption := 'Arquivo: ' + GhiGetActiveFileName(Ed);
@@ -158,100 +181,171 @@ begin
   Close;
 end;
 
+procedure TfrmGhiComposer.btnRefreshModelsClick(Sender: TObject);
+var
+  Err: string;
+  Cur: string;
+begin
+  reStatus.Clear;
+  if Trim(edtUrl.Text) = '' then
+  begin
+    GhiRichEditAppendPlain(reStatus, 'Informe o endpoint (chat completions) na aba API.');
+    pgcMain.ActivePage := tabApi;
+    Exit;
+  end;
+  if Trim(edtApiKey.Text) = '' then
+  begin
+    GhiRichEditAppendPlain(reStatus, 'Informe a API Key para carregar a lista de modelos.');
+    pgcMain.ActivePage := tabApi;
+    Exit;
+  end;
+
+  Cur := Trim(cboModel.Text);
+  if Cur = '' then
+    Cur := cDefModel;
+
+  Screen.Cursor := crHourGlass;
+  try
+    Err := GhiListChatModels(edtUrl.Text, edtApiKey.Text, cboModel.Items);
+  finally
+    Screen.Cursor := crDefault;
+  end;
+
+  if Err <> '' then
+  begin
+    GhiRichEditAppendPlain(reStatus, 'Lista de modelos: ' + Err);
+    Exit;
+  end;
+
+  SyncModelAfterIni(Cur);
+  GhiRichEditAppendPlain(reStatus, Format('Lista de modelos: %d id(s) carregado(s).', [cboModel.Items.Count]));
+end;
+
 procedure TfrmGhiComposer.btnRunClick(Sender: TObject);
 var
   Ed: IOTASourceEditor;
   V: IOTAEditView;
   Code, Err, OutText: string;
   HasSel: Boolean;
+  SelOnly: Boolean;
   Cfg: TGhiAIConfig;
   UserBlock: string;
 begin
-  memStatus.Clear;
+  reStatus.Clear;
   if not GhiTryGetActiveSourceEditor(Ed, V) then
   begin
-    memStatus.Lines.Add('Abra um .pas ou .dfm como texto no editor e tente novamente.');
+    GhiRichEditAppendPlain(reStatus, 'Abra um .pas ou .dfm como texto no editor e tente novamente.');
     Exit;
   end;
 
   if Trim(memPrompt.Text) = '' then
   begin
-    memStatus.Lines.Add('Digite o pedido na aba Chat.');
+    GhiRichEditAppendPlain(reStatus, 'Digite o pedido na aba Chat.');
     pgcMain.ActivePage := tabChat;
     Exit;
   end;
 
-  if not GhiReadScope(Ed, V, chkSelOnly.Checked, Code, HasSel) then
+  SelOnly := False;
+  if GhiHasNonEmptyEditorSelection(Ed) then
   begin
-    memStatus.Lines.Add('Não foi possível ler o editor.');
+    case MessageDlg(
+      'Há texto selecionado no editor.' + sLineBreak + sLineBreak +
+      'Sim = enviar e depois substituir apenas a seleção.' + sLineBreak +
+      'Não = enviar e substituir o arquivo inteiro.' + sLineBreak + sLineBreak +
+      'Cancelar = não executar o pedido.',
+      mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
+      mrCancel:
+        Exit;
+      mrYes:
+        SelOnly := True;
+      mrNo:
+        SelOnly := False;
+    else
+      Exit;
+    end;
+  end;
+
+  if not GhiReadScope(Ed, V, SelOnly, Code, HasSel) then
+  begin
+    GhiRichEditAppendPlain(reStatus, 'Não foi possível ler o editor.');
     Exit;
   end;
 
-  if chkSelOnly.Checked and not HasSel then
+  if SelOnly and not HasSel then
   begin
-    memStatus.Lines.Add('Selecione texto no editor ou desmarque "Apenas texto selecionado".');
+    GhiRichEditAppendPlain(reStatus, 'A seleção não pôde ser lida; tente novamente no editor.');
     Exit;
   end;
 
   if Trim(edtUrl.Text) = '' then
   begin
-    memStatus.Lines.Add('Informe o endpoint na aba API.');
+    GhiRichEditAppendPlain(reStatus, 'Informe o endpoint na aba API.');
     pgcMain.ActivePage := tabApi;
     Exit;
   end;
 
-  if Trim(edtModel.Text) = '' then
+  if Trim(cboModel.Text) = '' then
   begin
-    memStatus.Lines.Add('Informe o modelo na aba API.');
+    GhiRichEditAppendPlain(reStatus, 'Informe o modelo na aba API.');
     pgcMain.ActivePage := tabApi;
     Exit;
   end;
 
   if Trim(edtApiKey.Text) = '' then
   begin
-    memStatus.Lines.Add('Informe a API Key na aba API.');
+    GhiRichEditAppendPlain(reStatus, 'Informe a API Key na aba API.');
     pgcMain.ActivePage := tabApi;
     Exit;
   end;
 
   Cfg.Endpoint := Trim(edtUrl.Text);
-  Cfg.Model := Trim(edtModel.Text);
+  Cfg.Model := Trim(cboModel.Text);
   Cfg.ApiKey := Trim(edtApiKey.Text);
 
   UserBlock :=
     'Arquivo: ' + GhiGetActiveFileName(Ed) + sLineBreak +
-    'Modo: ' + IfThen(chkSelOnly.Checked, 'substituir apenas a seleção.', 'substituir o arquivo inteiro.') + sLineBreak +
+    'Modo: ' + IfThen(SelOnly, 'substituir apenas a seleção.', 'substituir o arquivo inteiro.') + sLineBreak +
     sLineBreak + 'Pedido:' + sLineBreak + memPrompt.Text + sLineBreak + sLineBreak +
     'Código atual:' + sLineBreak + Code;
 
   Err := GhiChatCompletion(Cfg, cSysPrompt, UserBlock, OutText);
   if Err <> '' then
   begin
-    memStatus.Lines.Add(Err);
+    GhiRichEditAppendPlain(reStatus, Err);
     Exit;
   end;
 
   if Trim(OutText) = '' then
   begin
-    memStatus.Lines.Add('Resposta vazia do modelo.');
+    GhiRichEditAppendPlain(reStatus, 'Resposta vazia do modelo.');
     Exit;
   end;
 
-  memStatus.Text := OutText;
+  GhiShowLineDiffInRichEdit(reStatus, Code, OutText);
 
   case MessageDlg('Substituir o código no editor pelo resultado do modelo?',
     mtConfirmation, [mbYes, mbNo, mbCancel], 0) of
     mrYes:
       begin
-        if not GhiReplaceScope(Ed, V, OutText, chkSelOnly.Checked) then
-          memStatus.Lines.Add('Falha ao escrever no editor.')
+        GhiRichEditAppendPlain(reStatus, '');
+        GhiRichEditAppendPlain(reStatus, '---');
+        if not GhiReplaceScope(Ed, V, OutText, SelOnly) then
+          GhiRichEditAppendPlain(reStatus, 'Falha ao escrever no editor.')
         else
-          memStatus.Lines.Add('Código aplicado.');
+          GhiRichEditAppendPlain(reStatus, 'Código aplicado.');
       end;
     mrNo:
-      memStatus.Lines.Add('Não aplicado. O texto do modelo permanece acima.');
+      begin
+        GhiRichEditAppendPlain(reStatus, '');
+        GhiRichEditAppendPlain(reStatus, '---');
+        GhiRichEditAppendPlain(reStatus, 'Não aplicado. O diff acima permanece visível.');
+      end;
   else
-    { cancel }
+    begin
+      GhiRichEditAppendPlain(reStatus, '');
+      GhiRichEditAppendPlain(reStatus, '---');
+      GhiRichEditAppendPlain(reStatus, 'Substituição cancelada. O diff permanece acima.');
+    end;
   end;
 end;
 

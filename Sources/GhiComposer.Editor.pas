@@ -8,6 +8,7 @@ uses
 function GhiTryGetActiveSourceEditor(out AEditor: IOTASourceEditor;
   out AView: IOTAEditView): Boolean;
 function GhiGetActiveFileName(const AEditor: IOTASourceEditor): string;
+function GhiHasNonEmptyEditorSelection(const AEditor: IOTASourceEditor): Boolean;
 function GhiReadScope(const AEditor: IOTASourceEditor; const AView: IOTAEditView;
   ASelectionOnly: Boolean; out AText: string; out AHasSelection: Boolean): Boolean;
 function GhiReplaceScope(const AEditor: IOTASourceEditor; const AView: IOTAEditView;
@@ -19,7 +20,7 @@ uses
   System.SysUtils,
   System.Classes;
 
-function GhiEditorHasNonEmptySelection(const AEditor: IOTASourceEditor): Boolean;
+function GhiHasNonEmptyEditorSelection(const AEditor: IOTASourceEditor): Boolean;
 var
   BS, BA: TOTACharPos;
 begin
@@ -98,7 +99,7 @@ begin
   if (AEditor = nil) or (AView = nil) then
     Exit;
 
-  AHasSelection := GhiEditorHasNonEmptySelection(AEditor);
+  AHasSelection := GhiHasNonEmptyEditorSelection(AEditor);
 
   Reader := AEditor.CreateReader;
   if Reader = nil then
@@ -106,7 +107,7 @@ begin
 
   if ASelectionOnly then
   begin
-    if not GhiEditorHasNonEmptySelection(AEditor) then
+    if not GhiHasNonEmptyEditorSelection(AEditor) then
       Exit;
     BlockStart := AEditor.BlockStart;
     BlockAfter := AEditor.BlockAfter;
@@ -142,7 +143,7 @@ begin
   if Writer = nil then
     Exit;
 
-  if ASelectionOnly and GhiEditorHasNonEmptySelection(AEditor) then
+  if ASelectionOnly and GhiHasNonEmptyEditorSelection(AEditor) then
   begin
     BlockStart := AEditor.BlockStart;
     BlockAfter := AEditor.BlockAfter;

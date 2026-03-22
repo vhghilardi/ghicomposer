@@ -3,6 +3,7 @@ unit GhiComposer.AI;
 interface
 
 uses
+  System.Classes,
   System.SysUtils;
 
 type
@@ -12,6 +13,8 @@ type
     ApiKey: string;
   end;
 
+function GhiListChatModels(const ChatEndpoint, ApiKey: string; ADest: TStrings): string;
+
 function GhiChatCompletion(const Cfg: TGhiAIConfig; const ASystemPrompt, AUserPrompt: string;
   out AContent: string): string;
 
@@ -20,7 +23,88 @@ implementation
 uses
   System.Classes,
   System.JSON,
-  System.Net.HttpClient;
+  System.Net.HttpClient,
+  System.SysUtils;
+
+function GhiModelsUrlFromChatEndpoint(const ChatEndpoint: string): string;
+var
+  U: string;
+begin
+  U := Trim(ChatEndpoint);
+  Result := StringReplace(U, '/chat/completions', '/models', [rfReplaceAll, rfIgnoreCase]);
+end;
+
+function GhiListChatModels(const ChatEndpoint, ApiKey: string; ADest: TStrings): string;
+var
+  ModelsUrl, Raw, Id: string;
+  Client: THTTPClient;
+  Resp: IHTTPResponse;
+  V: TJSONValue;
+  Root: TJSONObject;
+  Data: TJSONArray;
+  Item: TJSONValue;
+  SL: TStringList;
+  I: Integer;
+begin
+  Result := '';
+  ADest.Clear;
+  if Trim(ChatEndpoint) = '' then
+    Exit('URL do endpoint vazia.');
+  if Trim(ApiKey) = '' then
+    Exit('API Key vazia.');
+
+  ModelsUrl := GhiModelsUrlFromChatEndpoint(ChatEndpoint);
+  if SameText(ModelsUrl, Trim(ChatEndpoint)) then
+    Exit('Nao foi possivel obter /models a partir do endpoint (use .../v1/chat/completions).');
+
+  Client := THTTPClient.Create;
+  try
+    Client.CustomHeaders['Authorization'] := 'Bearer ' + ApiKey;
+    Client.ConnectionTimeout := 30000;
+    Client.ResponseTimeout := 60000;
+    Resp := Client.Get(ModelsUrl);
+    Raw := Resp.ContentAsString(TEncoding.UTF8);
+    if Resp.StatusCode >= 400 then
+      Exit(Format('HTTP %d: %s', [Resp.StatusCode, Raw]));
+  finally
+    Client.Free;
+  end;
+
+  V := TJSONObject.ParseJSONValue(Raw);
+  if V = nil then
+    Exit('Resposta JSON invalida ao listar modelos.');
+
+  SL := TStringList.Create;
+  try
+    SL.Sorted := True;
+    SL.Duplicates := dupIgnore;
+    try
+      if not (V is TJSONObject) then
+        Exit('Lista de modelos: resposta nao e objeto JSON.');
+      Root := TJSONObject(V);
+      if not Root.TryGetValue<TJSONArray>('data', Data) then
+        Exit('Lista de modelos: campo "data" ausente.');
+
+      for I := 0 to Data.Count - 1 do
+      begin
+        Item := Data.Items[I];
+        if Item is TJSONObject then
+          if TJSONObject(Item).TryGetValue<string>('id', Id) and (Trim(Id) <> '') then
+            SL.Add(Trim(Id));
+      end;
+
+      if SL.Count = 0 then
+        Exit('Lista de modelos vazia (nenhum "id" em "data").');
+
+      ADest.Assign(SL);
+      Result := '';
+    finally
+      V.Free;
+    end;
+  finally
+    SL.Free;
+  end;
+end;
 
 function StripCodeFences(const S: string): string;
 var

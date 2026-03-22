@@ -36,24 +36,16 @@ object frmGhiComposer: TfrmGhiComposer
         Left = 12
         Top = 28
         Width = 720
-        Height = 120
+        Height = 140
         Anchors = [akLeft, akTop, akRight]
         ScrollBars = ssVertical
         TabOrder = 0
         WantReturns = True
         WordWrap = True
       end
-      object chkSelOnly: TCheckBox
-        Left = 12
-        Top = 156
-        Width = 520
-        Height = 17
-        Caption = ' '
-        TabOrder = 1
-      end
       object lblFile: TLabel
         Left = 12
-        Top = 180
+        Top = 176
         Width = 720
         Height = 17
         Anchors = [akLeft, akTop, akRight]
@@ -93,12 +85,24 @@ object frmGhiComposer: TfrmGhiComposer
           Height = 17
           Caption = 'Modelo'
         end
-        object edtModel: TEdit
+        object cboModel: TComboBox
           Left = 12
           Top = 100
-          Width = 400
+          Width = 520
           Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          Style = csDropDown
           TabOrder = 1
+        end
+        object btnRefreshModels: TButton
+          Left = 544
+          Top = 98
+          Width = 180
+          Height = 28
+          Anchors = [akTop, akRight]
+          Caption = 'Atualizar modelos'
+          TabOrder = 2
+          OnClick = btnRefreshModelsClick
         end
         object lblKey: TLabel
           Left = 12
@@ -114,7 +118,7 @@ object frmGhiComposer: TfrmGhiComposer
           Height = 25
           Anchors = [akLeft, akTop, akRight]
           PasswordChar = '*'
-          TabOrder = 2
+          TabOrder = 3
         end
       end
     end
@@ -156,12 +160,19 @@ object frmGhiComposer: TfrmGhiComposer
     Align = alTop
     Caption = ' '
   end
-  object memStatus: TMemo
+  object reStatus: TRichEdit
     Left = 0
     Top = 277
     Width = 760
     Height = 243
     Align = alClient
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'Consolas'
+    Font.Style = []
+    HideSelection = False
+    PlainText = False
     ReadOnly = True
     ScrollBars = ssBoth
     TabOrder = 1
