@@ -6,7 +6,7 @@ uses
   ToolsAPI;
 
 type
-  TGhiComposerMenuWizard = class(TInterfacedObject, IOTAWizard, IOTAMenuWizard)
+  TGhiComposerMenuWizard = class(TNotifierObject, IOTAWizard, IOTAMenuWizard)
   private
     procedure ShowComposer;
   public
