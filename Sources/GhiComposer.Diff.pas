@@ -1,4 +1,4 @@
-unit GhiComposer.Diff;
+﻿unit GhiComposer.Diff;
 
 interface
 
@@ -28,6 +28,10 @@ uses
 const
   MaxDiffLinesPerSide = 800;
   MaxDiffCells = 3500000;
+
+{$IF CompilerVersion >= 33.0}
+{$DEFINE GHI_HAS_RICHEDIT_BACKCOLOR}
+{$IFEND}
 
 type
   TLineDiffKind = (ldkDelete, ldkInsert, ldkEqual);
@@ -86,7 +90,9 @@ begin
   R.SelStart := P;
   R.SelLength := 0;
   R.SelAttributes.Color := clWindowText;
+{$IFDEF GHI_HAS_RICHEDIT_BACKCOLOR}
   R.SelAttributes.BackColor := clWindow;
+{$ENDIF}
   R.SelAttributes.Style := [];
   R.SelText := S + sLineBreak;
 end;
@@ -99,7 +105,9 @@ begin
   R.SelStart := P;
   R.SelLength := 0;
   R.SelAttributes.Color := Fore;
+{$IFDEF GHI_HAS_RICHEDIT_BACKCOLOR}
   R.SelAttributes.BackColor := Back;
+{$ENDIF}
   R.SelAttributes.Style := [];
   R.SelText := Line + sLineBreak;
 end;
@@ -142,7 +150,9 @@ begin
   R.DefAttributes.Name := R.Font.Name;
   R.DefAttributes.Size := R.Font.Size;
   R.DefAttributes.Color := clWindowText;
+{$IFDEF GHI_HAS_RICHEDIT_BACKCOLOR}
   R.DefAttributes.BackColor := clWindow;
+{$ENDIF}
 
   if OldText = NewText then
   begin
